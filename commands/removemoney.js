@@ -1,3 +1,4 @@
+const { EmbedBuilder } = require('discord.js');
 const Economy = require('../models/economy');
 
 module.exports = {
@@ -7,14 +8,14 @@ module.exports = {
     usage: '<user> <amount>',
     async execute(message, args) {
         if (!message.member.permissions.has('ADMINISTRATOR')) {
-            return message.reply('You do not have permission to use this command.');
+            return message.reply('🚫 You do not have permission to use this command. 🚫');
         }
 
         const user = message.mentions.users.first();
         const amount = parseInt(args[1]);
 
         if (!user || isNaN(amount) || amount <= 0) {
-            return message.reply('Please mention a valid user and specify a valid amount.');
+            return message.reply('🔍 Please mention a valid user and specify a valid amount to remove.');
         }
 
         try {
@@ -29,16 +30,30 @@ module.exports = {
             }
 
             if (economyUser.balance < amount) {
-                return message.reply('The user does not have enough balance.');
+                return message.reply(`💸 ${user.username} does not have enough balance to remove ${amount} coins.`);
             }
 
             economyUser.balance -= amount;
             await economyUser.save();
 
-            message.reply(`Removed ${amount} from ${user.username}'s balance.`);
+            // Create a fun and engaging embed message
+            const embed = new EmbedBuilder()
+                .setTitle('💰 Balance Updated! 💰')
+                .setDescription(`
+                    **Action**: Remove Money
+                    **User**: ${user.username}
+                    **Amount Removed**: ${amount} coins
+                    **New Balance**: ${economyUser.balance} coins
+                `)
+                .setColor('#FF5733') // Orange color for action
+                .setFooter({ text: '©️ Nexus Inc. | Balance Management' })
+                .setTimestamp();
+
+            await message.channel.send({ embeds: [embed] });
+
         } catch (error) {
             console.error('Error removing money:', error);
-            message.reply('There was an error removing money.');
+            message.reply('⚠️ There was an error processing the request. ⚠️');
         }
     },
 };
