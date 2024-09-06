@@ -3,18 +3,20 @@ const fs = require('fs');
 const mongoose = require('mongoose');
 require('dotenv').config();
 
-// Import models
+const BannedUser = require('./models/bannedUser');
 const Afk = require('./models/afk');
 const Level = require('./models/level');
-const Moderator = require('./models/moderator');
 
-// Initialize the client
+// Initialize the client with intents and partials
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent
-    ]
+        GatewayIntentBits.MessageContent,
+        GatewayIntentBits.DirectMessages, // Added for handling DMs
+        GatewayIntentBits.MessageContent // Added to ensure message content is accessible
+    ],
+    partials: ['MESSAGE', 'CHANNEL', 'REACTION'] // Handle partial messages, channels, and reactions
 });
 
 // Load commands
@@ -39,16 +41,27 @@ mongoose.connect(process.env.MONGODB_URI, {
 .then(() => console.log('MongoDB connected'))
 .catch(err => console.error('MongoDB connection error:', err));
 
+// Event handler for when the bot is ready
 client.once('ready', () => {
     console.log(`${client.user.tag} is online!`);
 });
+
 client.on('messageCreate', async message => {
     if (message.author.bot) return;
 
+    // Check if the user is banned
+    const bannedUser = await BannedUser.findOne({ userId: message.author.id });
+    if (bannedUser) {
+        return message.reply('You are banned from using this bot.');
+    }
+
     // Check for AFK mentions
-    const afkData = await Afk.findOne({ userId: message.mentions.users.first()?.id });
-    if (afkData) {
-        message.reply(`${message.mentions.users.first().username} is currently AFK: ${afkData.reason}`);
+    const mentionedUser = message.mentions.users.first();
+    if (mentionedUser) {
+        const afkData = await Afk.findOne({ userId: mentionedUser.id });
+        if (afkData) {
+            message.reply(`${mentionedUser.username} is currently AFK: ${afkData.reason}`);
+        }
     }
 
     // Handle experience points and level-ups
@@ -77,7 +90,6 @@ client.on('messageCreate', async message => {
         user.level += 1;
 
         // Define roles based on levels
-        let role = 'GOD'; // Default role for levels above 55
         const levelRoles = [
             { level: 2, role: '🏳Citizen' },
             { level: 4, role: '👼Baby Wizard' },
@@ -156,5 +168,18 @@ client.on('error', (error) => {
     console.error('An error occurred:', error);
 });
 
+
+client.on('messageCreate', async message => {
+    // Ignore bot messages
+    if (message.author.bot) return;
+
+    // Check if the message is from a DM
+    if (message.channel.type === 'DM') {
+        // Handle DM commands or responses here
+        if (message.content.startsWith('!hello')) {
+            await message.reply('Hello! How can I assist you today?');
+        }
+    }
+});
 // Log in to Discord
 client.login(process.env.BOT_TOKEN);
