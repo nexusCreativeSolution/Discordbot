@@ -48,11 +48,33 @@ module.exports = {
                 const winnings = amount * winMultiplier;
                 user.balance += winnings;
                 await user.save();
-                message.reply(`Congratulations! You chose correctly and won ${winnings} coins. Your new balance is ${user.balance} coins.`);
+                message.channel.send(`
+╔═══════════════════════════════╗
+║ 🎉 *Jackpot!!* 🎉
+║ You bet **${amount}** coins on *${userChoice}*...
+║ 🎯 And it was *correct*!
+║ You win **${winnings}** coins! 💰
+║ 🏅 *New Balance*: **${user.balance}** coins!
+║ 🍀 *Great luck, ${message.author.username}!* 🍀
+╚═══════════════════════════════╝
+
+             ©️ Nexus Inc
+                `);
             } else {
                 user.balance -= amount * lossPenalty;
                 await user.save();
-                message.reply(`Sorry, you chose incorrectly and lost ${amount * lossPenalty} coins. Your new balance is ${user.balance} coins.`);
+                message.channel.send(`
+╔═══════════════════════════════╗
+║ 😢 *Oh no...* 😢
+║ You bet **${amount}** coins on *${userChoice}*...
+║ 💔 But the correct choice was *${correctChoice}*...
+║ 😔 You lose **${amount * lossPenalty}** coins...
+║ ⚖️ *New Balance*: **${user.balance}** coins.
+║ 🍀 *Better luck next time, ${message.author.username}!* 🍀
+╚═══════════════════════════════╝
+
+             ©️ Nexus Inc
+                `);
             }
         } catch (error) {
             console.error('Error executing gamble command:', error);
