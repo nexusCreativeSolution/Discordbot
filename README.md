@@ -6,6 +6,6 @@ npm install
 npm install discord.js
 npm install dotenv
 
-##start 
+start bot🔻🔻
 
 node index.js
