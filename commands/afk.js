@@ -2,12 +2,12 @@ const Afk = require('../models/afk');
 
 module.exports = {
     name: 'afk',
-    description: 'Set yourself as AFK.',
+    description: 'Set yourself as AFK and let others know you’re busy! 😴',
     args: true,
     usage: '<reason>',
     async execute(message, args) {
-        const reason = args.join(' ') || 'No reason provided';
-
+        const reason = args.join(' ') || 'No reason provided 🌙';
+        
         // Save the user as AFK in MongoDB
         await Afk.findOneAndUpdate(
             { userId: message.author.id },
@@ -15,6 +15,14 @@ module.exports = {
             { upsert: true }
         );
 
-        message.reply(`You are now AFK: ${reason}`);
+        // Fun and branded response
+        message.reply(`
+🚶‍♂️ *${message.author.username}* is now AFK! 💤
+Reason: ${reason}
+Don't worry, they'll be back soon! ⏳
+In the meantime, maybe grab a snack? 🍕
+    
+    ©️Nexus Inc. – We’ll keep things running while you’re away! 😎
+        `);
     },
 };
