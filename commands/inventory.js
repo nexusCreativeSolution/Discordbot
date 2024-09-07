@@ -1,33 +1,37 @@
-// inventory.js
+const { EmbedBuilder } = require('discord.js');
 const Inventory = require('../models/inventory');
 
 module.exports = {
     name: 'inventory',
-    description: 'View your inventory.',
+    description: 'Check your inventory.',
+    args: false,
     async execute(message) {
         try {
-            const userId = message.author.id;
+            // Fetch user's inventory and populate item details
+            let userInventory = await Inventory.findOne({ userId: message.author.id }).populate('items');
 
-            // Fetch user's inventory from the database
-            let inventoryData = await Inventory.findOne({ userId });
-
-            if (!inventoryData || inventoryData.items.length === 0) {
-                return message.reply('Your inventory is empty.');
+            // Check if the user has any items
+            if (!userInventory || !userInventory.items.length) {
+                return message.reply('🛍️ **Your inventory is currently empty.**');
             }
 
-            // Format the inventory for display
-            let inventoryList = inventoryData.items.map(item => 
-                `${item.name} (x${item.quantity})`
-            ).join('\n');
+            // Prepare a list of item names with lines between sections
+            const itemsList = userInventory.items.map(item => `• **${item.name}**\n`).join('\n──────────\n');
 
-            message.reply(`
-📦 **Inventory**
-${inventoryList}
-            `);
+            // Create the embed
+            const embed = new EmbedBuilder()
+                .setColor('#00FF00') // Customize the color
+                .setTitle('📦 Your Inventory')
+                .setDescription(`${itemsList}`)
+                .setFooter({ text: '©️ Nexus Inc' }) // Removed iconURL for now
+                .setTimestamp(); // Adds a timestamp to the footer
+
+            // Send the embed
+            message.channel.send({ embeds: [embed] });
 
         } catch (error) {
             console.error('Error fetching inventory:', error);
-            message.reply('There was an error fetching your inventory.');
+            message.reply('🚨 There was an error fetching your inventory. Please try again later.');
         }
-    }
+    },
 };
