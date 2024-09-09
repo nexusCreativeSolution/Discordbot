@@ -1,23 +1,22 @@
-const { Client, GatewayIntentBits, Collection, EmbedBuilder } = require('discord.js');
+const { Client, GatewayIntentBits, Collection, EmbedBuilder, ChannelType, PermissionsBitField } = require('discord.js');
 const fs = require('fs');
 const mongoose = require('mongoose');
 require('dotenv').config();
-const { PermissionsBitField } = require('discord.js');
 const BannedUser = require('./models/bannedUser');
 const Afk = require('./models/afk');
 const Level = require('./models/level');
 
-
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMembers,  // Add this line to ensure the bot detects member join events
+        GatewayIntentBits.GuildMembers,
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.MessageContent,
         GatewayIntentBits.DirectMessages,
     ],
     partials: ['MESSAGE', 'CHANNEL', 'REACTION'],
 });
+
 client.commands = new Collection();
 const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js'));
 
@@ -47,7 +46,7 @@ client.on('messageCreate', async message => {
 
     const bannedUser = await BannedUser.findOne({ userId: message.author.id });
     if (bannedUser) {
-        return message.reply('Access to this bot has been restricted for your account. If you believe this is an error, please contact support.');
+        return message.reply('You are banned from using this bot.');
     }
 
     const mentionedUser = message.mentions.users.first();
@@ -58,6 +57,7 @@ client.on('messageCreate', async message => {
         }
     }
 
+    // Leveling system
     const experiencePerMessage = 8;
     let user = await Level.findOne({ userId: message.author.id });
 
@@ -71,7 +71,6 @@ client.on('messageCreate', async message => {
     }
 
     user.experience += experiencePerMessage;
-
     let experienceForNextLevel = user.level * 100;
     let levelUpMessage = '';
 
@@ -141,63 +140,14 @@ client.on('messageCreate', async message => {
                 console.error(`Error executing command ${commandName}:`, error);
                 message.reply('There was an error executing that command.');
             }
-        } else if (commandName === 'broadcast') {
-            if (message.member.permissions.has('ADMINISTRATOR')) {
-                const broadcastMessage = args.join(' ');
-                if (!broadcastMessage) {
-                    return message.reply('Please provide a message to broadcast.');
-                }
-
-                const embed = new EmbedBuilder()
-                .setTitle('📢 Broadcast Message 📢')
-                .setDescription(broadcastMessage)
-                .setColor('#FF0000')
-                .setFooter({ text: 'Broadcast System' });
-
-                // Send the broadcast message to all guilds
-                
-                
-
-                client.guilds.cache.forEach(async guild => {
-                    try {
-                        const botMember = await guild.members.fetch(client.user.id);
-                        const defaultChannel = guild.channels.cache.find(channel => 
-                            channel.type === ChannelType.GuildText && 
-                            channel.permissionsFor(botMember).has(PermissionsBitField.Flags.SendMessages)
-                        );
-                        if (defaultChannel) {
-                            await defaultChannel.send({ embeds: [embed] });
-                        }
-                    } catch (error) {
-                        console.error(`Error fetching bot member or sending message in guild ${guild.id}:`, error);
-                    }
-                });
-
-                message.reply('Broadcast message sent!');
-            } else {
-                message.reply('You do not have permission to use this command.');
-            }
         } else {
             message.reply('Unknown command. Please use a valid command.');
         }
     }
 });
 
-client.on('error', error => {
-    console.error('An error occurred:', error);
-});
-
-client.on('messageCreate', async message => {
-    if (message.author.bot) return;
-
-    if (message.channel.type === 'DM') {
-        if (message.content.startsWith('!hello')) {
-            await message.reply('Hello! How can I assist you today?');
-        }
-    }
-});
 client.on('guildMemberAdd', async member => {
-    const channelId = '1282326078139924483';
+    const channelId = '1281312666119442523';
     const welcomeChannel = member.guild.channels.cache.get(channelId);
 
     if (welcomeChannel) {
@@ -210,6 +160,44 @@ client.on('guildMemberAdd', async member => {
         welcomeChannel.send({ embeds: [embed] });
     } else {
         console.error('Welcome channel not found.');
+    }
+});
+
+client.on('messageCreate', async message => {
+    if (message.author.bot) return;
+
+    // Check if the user is setting AFK status
+    if (message.content.startsWith('!afk')) {
+        const reason = message.content.slice(5).trim() || 'No reason provided.';
+        await Afk.findOneAndUpdate(
+            { userId: message.author.id },
+            { username: message.author.username, reason, timestamp: new Date() },
+            { upsert: true }
+        );
+        // No reply confirming AFK status
+        return; // Exit early to avoid further processing
+    }
+
+    // Check if the user is currently AFK
+    const afkUser = await Afk.findOne({ userId: message.author.id });
+    if (afkUser) {
+        // Remove the user from AFK in MongoDB
+        await Afk.findOneAndDelete({ userId: message.author.id });
+
+        // Send a welcome back message
+        await message.reply(`
+🎉 Welcome back, *${message.author.username}*! Hope you had a good break! 😄
+    ©️Nexus Inc. – We knew you'd return! 😎
+        `);
+    }
+
+    // Check if the mentioned user is AFK and notify the message sender
+    const mentionedUser = message.mentions.users.first();
+    if (mentionedUser) {
+        const afkData = await Afk.findOne({ userId: mentionedUser.id });
+        if (afkData) {
+            await message.reply(`${mentionedUser.username} is currently AFK: ${afkData.reason}`);
+        }
     }
 });
 client.login(process.env.BOT_TOKEN);
