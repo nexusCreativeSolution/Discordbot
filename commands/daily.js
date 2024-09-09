@@ -1,4 +1,5 @@
-const User = require('../models/economy'); // Ensure you have a user model
+const User = require('../models/user'); // Ensure you have a user model
+const economy = require('../models/economy');
 const ms = require('ms'); // A library to handle time formatting
 
 module.exports = {
