@@ -7,19 +7,20 @@ module.exports = {
     args: false,
     async execute(message) {
         const userId = message.author.id;
+        const username = message.author.username; // Retrieve username from Discord
 
         try {
-            console.log(`User ID: ${userId} is trying to claim daily reward.`);
-
             // Fetch user data
             let user = await User.findOne({ userId });
             if (!user) {
                 console.log(`User with ID: ${userId} not found. Creating new user.`);
                 // Create user if not exists
-                user = new User({ userId });
+                user = new User({ userId, username });
                 await user.save();
-            } else {
-                console.log(`User with ID: ${userId} found.`);
+            } else if (user.username !== username) {
+                // Update username if it's different
+                user.username = username;
+                await user.save();
             }
 
             // Check if user is eligible for daily claim
@@ -32,7 +33,6 @@ module.exports = {
             if (lastClaim && timeSinceLastClaim < cooldown) {
                 const timeLeft = cooldown - timeSinceLastClaim;
                 const formattedTimeLeft = ms(timeLeft, { long: true });
-                console.log(`User ${userId} must wait ${formattedTimeLeft} before claiming again.`);
                 return message.reply(`You have already claimed your daily reward. Please wait ${formattedTimeLeft} before claiming again.`);
             }
 
@@ -42,8 +42,6 @@ module.exports = {
             user.lastDailyClaim = now;
 
             await user.save();
-
-            console.log(`User ${userId} successfully claimed daily reward of ${rewardAmount}.`);
 
             message.reply(`You've successfully claimed your daily reward of ${rewardAmount} currency!`);
 
