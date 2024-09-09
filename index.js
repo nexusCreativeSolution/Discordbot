@@ -47,7 +47,7 @@ client.on('messageCreate', async message => {
 
     const bannedUser = await BannedUser.findOne({ userId: message.author.id });
     if (bannedUser) {
-        return message.reply('You are banned from using this bot.');
+        return message.reply('Access to this bot has been restricted for your account. If you believe this is an error, please contact support.');
     }
 
     const mentionedUser = message.mentions.users.first();
