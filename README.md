@@ -1,11 +1,7 @@
-install dependices 
+run the project🔻🔻
 
-npm init-y
-npm install mongoose
-npm install 
-npm install discord.js
-npm install dotenv
-npm install ms
+npm i
+
 start bot🔻🔻
 
-node index.js
+npm start
